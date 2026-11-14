@@ -1,0 +1,9 @@
+{
+  "name": "visagismo-mvp",
+  "version": "0.1.0",
+  "description": "MVP de aplicación de Visagismo y Colorimetría con MediaPipe Face Landmarker",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visagismo AI — Diagnóstico Facial y Colorimetría (MVP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">◈</span>
+        <div>
+          <h1>Visagismo Studio <span class="badge-mvp">MVP</span></h1>
+          <p class="subtitle">Análisis morfométrico facial &amp; colorimetría en tiempo real</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="modelStatus" class="status-pill status-loading">Cargando modelo IA...</span>
+        <button id="btnPrint" class="btn btn-secondary" disabled title="Exportar ficha de diagnóstico">
+          Imprimir / PDF
+        </button>
+      </div>
+    </header>
+
+    <main class="app-grid">
+      <!-- Panel Izquierdo: Captura y Visualización -->
+      <section class="panel viewport-panel">
+        <div class="mode-tabs">
+          <button id="tabUpload" class="tab-btn active">Subir Foto</button>
+          <button id="tabCamera" class="tab-btn">Cámara en Vivo</button>
+        </div>
+
+        <div class="stage-wrapper" id="stageWrapper">
+          <!-- Estado vacío / Dropzone -->
+          <div id="uploadDropzone" class="dropzone">
+            <div class="dropzone-icon">✦</div>
+            <h3>Sube una foto frontal</h3>
+            <p>Arrastra una imagen aquí o haz clic para seleccionar (JPG, PNG, WebP).</p>
+            <p class="hint">Tip: Buena iluminación frontal, sin lentes y cabello despejado del rostro.</p>
+            <input type="file" id="fileInput" accept="image/*" hidden />
+            <button id="btnSelectFile" class="btn btn-primary" type="button">Elegir Imagen</button>
+          </div>
+
+          <!-- Video en vivo -->
+          <video id="webcamVideo" playsinline autoplay muted class="hidden"></video>
+          <div id="cameraGuide" class="camera-guide hidden">
+            <div class="oval-guide"></div>
+            <span class="guide-text">Alinea tu rostro dentro del óvalo mirando al frente</span>
+          </div>
+
+          <!-- Canvas de resultado -->
+          <canvas id="outputCanvas" class="hidden"></canvas>
+        </div>
+
+        <!-- Controles inferiores del viewport -->
+        <div class="viewport-controls">
+          <div id="cameraActions" class="action-group hidden">
+            <button id="btnCapture" class="btn btn-primary" disabled>Capturar y Analizar</button>
+            <button id="btnStopCamera" class="btn btn-ghost">Detener Cámara</button>
+          </div>
+
+          <div id="resultActions" class="action-group hidden">
+            <label class="toggle-chip">
+              <input type="checkbox" id="toggleLines" checked />
+              <span>Líneas de visagismo</span>
+            </label>
+            <label class="toggle-chip">
+              <input type="checkbox" id="toggleMesh" checked />
+              <span>Malla 478 pts</span>
+            </label>
+            <button id="btnReset" class="btn btn-ghost">Nueva Foto</button>
+          </div>
+        </div>
+
+        <div id="poseWarning" class="alert-warning hidden"></div>
+      </section>
+
+      <!-- Panel Derecho: Diagnóstico y Recomendaciones -->
+      <section class="panel results-panel">
+        <div id="emptyResults" class="empty-state">
+          <div class="empty-orbit">◎</div>
+          <h2>Esperando análisis facial</h2>
+          <p>
+            Sube una fotografía o usa tu cámara para calcular tus proporciones áureas, tercios
+            faciales, forma del rostro y subtono de piel.
+          </p>
+          <div class="feature-list">
+            <div><span>✓</span> 7 Morfologías faciales</div>
+            <div><span>✓</span> Tercios y simetría</div>
+            <div><span>✓</span> Subtono y paleta</div>
+            <div><span>✓</span> Cortes, barba, cejas y gafas</div>
+          </div>
+        </div>
+
+        <div id="diagnosticContent" class="diagnostic-content hidden">
+          <!-- Resumen principal -->
+          <div class="result-hero">
+            <div>
+              <span class="eyebrow">Morfología Detectada</span>
+              <h2 id="shapeTitle" class="shape-title">—</h2>
+              <p id="shapeTagline" class="shape-tagline">—</p>
+            </div>
+            <div class="confidence-box">
+              <span id="shapeConfidence" class="confidence-val">—%</span>
+              <span class="confidence-lbl">Confianza</span>
+            </div>
+          </div>
+
+          <p id="shapeDescription" class="shape-desc"></p>
+          <div class="goal-box">
+            <strong>Objetivo de equilibrio:</strong> <span id="shapeGoal"></span>
+          </div>
+
+          <!-- Métricas Geométricas -->
+          <div class="section-block">
+            <h3>Métricas Geométricas</h3>
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <span class="metric-label">Relación Largo / Ancho</span>
+                <span id="metricRatioLC" class="metric-value">—</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">Frente / Mandíbula</span>
+                <span id="metricRatioFJ" class="metric-value">—</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">Ángulo Mandibular</span>
+                <span id="metricJawAngle" class="metric-value">—</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">Simetría Horizontal</span>
+                <span id="metricSymmetry" class="metric-value">—</span>
+              </div>
+            </div>
+
+            <div class="thirds-card">
+              <div class="thirds-header">
+                <span>Tercios Faciales</span>
+                <span class="thirds-ideal">Ideal armónico: ~33% / 33% / 33%</span>
+              </div>
+              <div class="thirds-bars">
+                <div class="third-row">
+                  <span>Superior</span>
+                  <div class="bar-track"><div id="barUpper" class="bar-fill"></div></div>
+                  <span id="valUpper" class="bar-pct">0%</span>
+                </div>
+                <div class="third-row">
+                  <span>Medio</span>
+                  <div class="bar-track"><div id="barMiddle" class="bar-fill"></div></div>
+                  <span id="valMiddle" class="bar-pct">0%</span>
+                </div>
+                <div class="third-row">
+                  <span>Inferior</span>
+                  <div class="bar-track"><div id="barLower" class="bar-fill"></div></div>
+                  <span id="valLower" class="bar-pct">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Colorimetría -->
+          <div class="section-block">
+            <h3>Colorimetría &amp; Subtono</h3>
+            <div class="color-card">
+              <div class="skin-sample">
+                <div id="skinSwatch" class="skin-swatch"></div>
+                <div>
+                  <span class="eyebrow">Subtono Estimado</span>
+                  <h4 id="undertoneTitle">—</h4>
+                </div>
+              </div>
+              <p id="undertoneDesc" class="undertone-desc"></p>
+              <div class="color-details">
+                <p><strong>Metales:</strong> <span id="undertoneMetals"></span></p>
+                <p><strong>Tintes sugeridos:</strong> <span id="undertoneHair"></span></p>
+              </div>
+              <div class="palette-row" id="paletteRow"></div>
+            </div>
+          </div>
+
+          <!-- Recomendaciones de Estilismo -->
+          <div class="section-block">
+            <div class="rec-header">
+              <h3>Recomendaciones de Estilo</h3>
+              <div class="style-filter" role="group" aria-label="Filtro de estilo">
+                <button class="filter-btn active" data-style="todos">Todos</button>
+                <button class="filter-btn" data-style="femenino">Femenino</button>
+                <button class="filter-btn" data-style="masculino">Masculino</button>
+              </div>
+            </div>
+
+            <div id="recCards" class="rec-grid"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Canvas oculto para muestreo de píxeles -->
+    <canvas id="samplingCanvas" class="hidden"></canvas>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
